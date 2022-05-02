@@ -541,6 +541,7 @@ importDates.push(100);
    ```typescript
    // const value: string
    const value = carMakers.pop();
+   ```
 
 2. 防止我们向数组中添加不兼容的值
 
