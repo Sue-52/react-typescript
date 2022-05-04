@@ -1,6 +1,14 @@
 import { User } from "./User";
 import { Company } from "./Company";
 
+// 定义接口
+export interface Mappable {
+  location: {
+    lat: number;
+    lng: number;
+  };
+  markerContent(): string;
+}
 export class Map {
   // 存储地图实例
   private googleMap: google.maps.Map;
@@ -39,24 +47,23 @@ export class Map {
   // }
   // 合并地图和用户位置
 
-  addMarker(mappable: User | Company) {
-    new google.maps.Marker({
+  addMarker(mappable: Mappable) {
+    // 创建地图标记
+    let marker = new google.maps.Marker({
       map: this.googleMap,
       position: {
         lat: mappable.location.lat,
         lng: mappable.location.lng
       },
     })
-    // 创建标记
-    const marker = new google.maps.Marker();
-    // 设置标记的位置
-    marker.addListener("click", () => {
+    // 绑定事件
+    marker.addListener('click', () => {
+      // 创建弹窗
       const infoWindow = new google.maps.InfoWindow({
-        content: "Hello I am marker content"
-      })
-      infoWindow.open(this.googleMap, marker)
+        content: mappable.markerContent(),
+      });
+      // 打开弹框并指定弹框在哪个地图的哪个的标记的位置上弹出
+      infoWindow.open(this.googleMap, marker);
     })
   }
-
-
 }
