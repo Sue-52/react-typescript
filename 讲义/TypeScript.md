@@ -2391,16 +2391,7 @@ printHousesOrCars<Hourse>(new Hourse());
 #### 8.1.2 创建应用
 
 ```bash
-# 全局安装 parcel 构建工具
-npm install parcel@2.4.1 -g
-# 创建应用目录并进入
-mkdir web && cd web
-# 创建应用工程文件
-npm init -y
-# 创建源码目录并进入
-mkdir src && cd src
-# 创建应用逻辑入口文件
-touch index.ts
+	x# 全局安装 parcel 构建工具npm install parcel@2.4.1 -g# 创建应用目录并进入mkdir web && cd web# 创建应用工程文件npm init -y# 创建源码目录并进入mkdir src && cd src# 创建应用逻辑入口文件touch index.tsbash
 ```
 
 ```typescript
