@@ -1,16 +1,21 @@
-// console.log("hello")
 import { User } from "./models/User";
 
-// const user = new User({ name: "里斯", age: 18 });
-const user = new User({ id: 2, name: "李四", age: 22 });
-console.log(user)
-user.on("click", () => {
-    console.log("click")
-});
+const user = new User({
+    name: "王五",
+    age: 33
+})
 
-user.trigger("click");
+// console.log(user.get("name"))
+user.on("change", () => {
+    console.log("changed")
+})
 
-// 保存数据
+user.set({ name: "李四" })
+user.fetch();
+
+user.on("save", () => {
+    console.log(user)
+})
 user.save();
 
-console.log(user.get("name"));
+console.log(user.get("name"))
