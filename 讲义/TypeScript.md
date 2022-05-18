@@ -31,6 +31,8 @@
 
 ### 1.2 类型系统带来的好处
 
+通过静态类型检查可以让开发者在编译时就发现错误而不是在代码运行时。
+
 类型系统为编辑器带来了更加精准的代码提示，以此来提升开发人员的编程体验。
 
 ```typescript
@@ -155,7 +157,7 @@ node index.js
 
 ```bash
 # nodemon: 监听文件的变化, 当 TypeScript 文件内容发生变动后调用 ts-node
-# ts-node: 1. 调用 tsc 将 TypeScript 代码编译为 JavaScript 代码 2. 调用 node 执行 JavaScript 代码
+# ts-node: 将 TypeScript 编译为 JavaScript 并执行
 npm install -g nodemon ts-node
 ```
 
@@ -168,6 +170,8 @@ npm install -g nodemon ts-node
 ```bash
 npm start
 ```
+
+tsc 与 ts-node 的主要区别在于 tsc 根据您的 tsconfig 编译所有文件。ts-node 会从入口文件开始，并根据导入/导出逐步转译文件。
 
 ### 2.3 体验类型带来的好处
 
@@ -270,7 +274,7 @@ let speed: string = "fast";
 // 布尔
 let hasName: boolean = true;
 
-// 内置对象
+// 内置对象 类本身可以作为类实例的类型
 let date: Date = new Date();
 // 字符串数组
 let colors: string[] = ["red", "green", "blue"];
@@ -282,19 +286,55 @@ let bools: boolean[] = [true, true, false];
 let point: { x: number; y: number } = { x: 100, y: 200 };
 
 // 自定义类
+// 类可以作为类实例的类型
 class Car {}
 let car: Car = new Car();
 
 // 函数
 let logNumber: (n: number) => void;
-logNumber = (n) => {
+logNumber = (n: number): void => {
   console.log(n);
 };
 
-// undefined 
+// undefined 和 null 这两个值本身也可以作为类型使用
+// 在非严格模式下, 可以为其他类型的变量值赋值为 null 或 undefined, 严格模式下使用联合类型
+// undefined
 let nothing: undefined = undefined;
 // null
 let nothingMuch: null = null;
+```
+
+```typescript
+// 联合类型: 为一个变量设置多个类型
+let a: string | number | boolean = true;
+// 字面量类型: 字面量的类型就是变量的类型, 字面量是变量的取值范围 
+let str = "a" | "b" | "c" = "a";
+```
+
+观察下列代码中存在的问题。
+
+```typescript
+let pizzaSize: 'large' | 'medium' | 'small' = 'medium'
+
+function selectPizzaSize (size: 'large' | 'medium'| 'small') {
+  pizzaSize = size
+}
+
+selectPizzaSize('small')
+```
+
+以上代码同一个类型被定义了多次, 重复代码太多，可以使用 type 创建类型，复用类型。
+
+```typescript
+type Size = 'large' | 'medium' | 'small'; 
+
+let pizzaSize: Size = 'medium'
+
+function selectPizzaSize (size: Size) {
+  pizzaSize = size
+}
+
+selectPizzaSize('large')
 ```
 
 ### 3.2 何时使用类型注释
@@ -434,7 +474,7 @@ const add = () => {
 ```
 
 ```typescript
-// const find: (name: string) => string | false
+// const find: (name: string) => string | boolean
 const find = (name: string) => {
   if (name) {
     return name;
@@ -444,13 +484,12 @@ const find = (name: string) => {
 };
 ```
 
-如果函数的返回值是 undefined 或者 null，可以指定函数的返回值为 void。
+如果函数的返回值是 undefined，可以指定函数的返回值为 void。
 
 ```typescript
 const logger = (message: string): void => {
   console.log(message);
   // return undefined;
-  // return null;
 };
 ```
 
@@ -478,7 +517,7 @@ const logWeather = ({ date, weather }: { date: Date; weather: string }) => {
 
 const today = {
   date: new Date(),
-  weather: "sunny",
+  weather: "sunny"
 };
 
 logWeather(today);
@@ -531,9 +570,20 @@ importDates.push(100);
 
 为什么要对数组中的元素进行类型约束？
 
+在声明变量时，如果变量的值时一个空数组，TypeScript 编译器不能正确推断出数组内部存储的值的类型，所以从数组中取出来的任何值都被视为 any。
+
+```javascript
+// const carMakers: any[];
+const carMakers = [];
+carMakers.push("a");
+// const first: any
+const first = carMakers[0];
+```
+
 1. 从数组中取值时可以帮助 TypeScript 编译器进行类型推断
 
    ```typescript
+   const carMakers: string[] = [];
    // const value: string
    const value = carMakers[0];
    ```
@@ -541,21 +591,22 @@ importDates.push(100);
    ```typescript
    // const value: string
    const value = carMakers.pop();
+
+2. 在使用数组方法时可以帮助 TypeScript 编译器进行类型推断 
+
+   ```typescript
+   const carMakers: string[] = [];
+   // (value: string, index: number, array: string[]) => string
+   carMakers.map((value, index, array) => value.toLocaleUpperCase());
+   // 在不指定数组中的值类型的情况下, TypeScript 编译器推断的结果如下:
+   // (value: any, index: number, array: any[]) => any
    ```
 
-2. 防止我们向数组中添加不兼容的值
+3. 防止我们向数组中添加不兼容的值
 
    ```typescript
    // 类型"number"的参数不能赋给类型"string"的参数。
    carMakers.push(100);
-   ```
-
-3. 在使用数组方法时可以帮助 TypeScript 编译器进行类型推断
-
-   ```typescript
-   carMakers.map((car: string): string => {
-     return car.toLocaleUpperCase();
-   });
    ```
 
 ### 3.5 元组
@@ -565,7 +616,7 @@ importDates.push(100);
 在 employee 数组中我们约定在数组中下标为0的位置存储员工姓名，在下标为1的位置存储员工的年龄。
 
 ```typescript
-var employee = ["张三", 20];
+let employee = ["张三", 20];
 employee[0] = 30;
 employee[1] = "李四";
 ```
@@ -683,9 +734,9 @@ printSummary(drink);
 
 #### 3.7.1 类与对象
 
-在现实世界中，类表示的是类别、分类、归类，是物以类聚的类，我们经常根据事物的特征将其进行分类，比如鸡鸭鹅狗猫，它们都属于动物的类别，再比如汽车、火车、高铁、飞机，它们都属于交通工具的类别。
+在现实世界中，类表示的是类别、分类、归类，我们经常根据事物的特征将其进行分类，比如鸡鸭鹅狗猫，它们都属于动物的类别，再比如汽车、火车、高铁、飞机，它们都属于交通工具的类别。
 
-在程序世界中，仍然使用类来描述一类具有相同特征的事物。
+在程序世界中，仍然使用类的概念描述一类具有相同特征的事物。
 
 ```typescript
 class Vehicle {
@@ -698,7 +749,7 @@ class Vehicle {
 }
 ```
 
-类是抽象的不代表具体的事物，通过类可以创建对象，对象才代表具体类别下的事物。
+类只是用来描述一类事物的特征，它并不是具体的事物。通过类可以创建对象，对象才代表该类别下具体的事物。
 
 ```typescript
 const vehicle = new Vehicle();
@@ -708,13 +759,11 @@ vehicle.honk();
 
 类和对象就是现实世界中图纸与房子的关系，图纸是对房子的描述，不是具体的房子，根据图纸创建出来的房子才是真实的。
 
-可以将类理解为生成对象的"模板"，通过类可以批量生成对象。
-
 #### 3.7.2 继承
 
-在现实世界中为事物进行分类，通常会对类别进行细化，比如汽车分类，在这个分类下还会包含轿车和面包车。这种细化关系在程序世界中应该如何表示呢？
+在现实世界中为事物进行分类，通常会对类别进行细化，比如汽车分类，在该分类下还会包含轿车和面包车，这种细化关系在程序世界中应该如何表示呢？
 
-在程序世界中，我们会分别创建汽车分类，轿车分类、面包车分类。在汽车分类下描述所有汽车的通用特征，在细化分类下只描述该分类独有的特征。
+在程序世界中我们会分别创建汽车分类，轿车分类、面包车分类，在汽车分类下描述所有汽车的通用特征，在细化分类下只描述该分类独有的特征。
 
 ```typescript
 // 汽车分类
@@ -737,21 +786,24 @@ class Van {
 }
 ```
 
-虽然我们目前对类别进行了细化，但随之也出现了问题，在使用类创建对象时，比如创建轿车对象，在创建出来的轿车对象中只包含了轿车的独有特征，没有包含汽车的通用特性，就是说创建出来的轿车对象是不完整的对象，完整的对象应该是既包含汽车的通用特征又包含轿车的独有特性。
+虽然我们目前对类别进行了细化，但随之也出现了问题，在使用类创建对象时，比如创建面包车对象，在创建出来的面包车对象中只包含了面包车的独有特征，没有包含汽车的通用特性，就是说创建出来的面包车对象是不完整的对象，完整的对象应该是既包含汽车的通用特征又包含轿车的独有特性。
 
 ```typescript
 const van = new Van();
 console.log(van); // { brand: "五菱宏光"}
 ```
 
-可以使用继承关系解决上述问题。既然汽车分类包含了细化分类的通用特征，那么汽车分类就被叫做父类，下面的细化分类就被叫做子类，子类通过继承父类就可以拥有汽车分类中的通用特征了，再加上子类中定义了其独有的特征，最终通过细化分类创建出来的对象就是拥有完整特性的对象了。
+可以使用继承关系解决上述问题。既然汽车分类包含了细化分类的通用特征，那么汽车分类就被叫做父类，下面的细化分类就被叫做子类，子类通过继承父类就可以拥有汽车分类中的通用特征了，再加上子类中定义了其独有的特征，最终通过子类创建出来的对象就是拥有完整特性的对象了。
 
 ```typescript
 class Car extends Vehicle {
   brand = "BMW";
 }
 
-var car = new Car(); // {brand: "BMW", drive: Function}
+var car = new Car(); 
+// {brand: "BMW"} 
+// car.drive() 
+// 注意: drive 方法被添加到了原型对象中, 所以 log 实例对象时并没有看到它
 ```
 
 子类在继承父类后，还可以通过重写父类方法对功能进行扩展。
@@ -776,7 +828,7 @@ class Car extends Vehicle {
 
 ##### 1. public
 
-类属性和类方法在不加任何权限修饰符的情况下，它就是可以在任何地方被访问的，也就是说 public 修饰符是可以被省略的。
+类属性和类方法在不加任何权限修饰符的情况下，它就是可以在任何地方被访问的，也就是说 public 是默认值，是可以被省略的。
 
 ```typescript
 class Vehicle {
@@ -900,8 +952,13 @@ car.color;
 
 [parcel](https://parceljs.org/) 是前端构建工具，类似 webpack，parcel 的最大特点是打包速速非常快而且零配置开箱即用。
 
+什么需求打包工具？
+
+ts -> js -> 代码不能直接运行，浏览器不识别模块。
+ts -> js -> 模块打包 -> 在浏览器中直接运行。
+
 ```bash
-npm install parcel@2.4.1 -g 
+npm install parcel@2.4.1 -g
 ```
 
 使用 [@faker-js/faker](https://www.npmjs.com/package/@faker-js/faker) 可以随机创建模拟数据，当前案例中用于随机生成用户和公司信息。
@@ -938,7 +995,7 @@ cd src && touch index.ts
 ```
 
 ```bash
-# 开启 dev server, 运行应用
+# 启动开发服务器, 运行应用
 parcel index.html
 ```
 
@@ -1059,7 +1116,7 @@ new google.maps.Map(document.getElementById("map"), {
 
 ### 4.5 封装地图类
 
-目标：创建 Map 类，在类中封装和地图的相关的业务逻辑，以后在创建地图时，只需要对该类进行实例化即可。
+目标：创建 Map 类，在类中封装和地图的相关的业务逻辑，以后在创建地图时只需要对该类进行实例化即可。
 
 ```typescript
 // src/Map.ts
@@ -1128,7 +1185,7 @@ map.addCompanyMarker(company);
 
 ### 4.7 消除重复代码
 
-在目前的代码中，addUserMarker 和 addCompanyMarker 两个方法中的代码是一模一样的，为消除重复代码，现决定将两个方法进行合并。
+在目前的代码中，addUserMarker 和 addCompanyMarker 两个方法中的代码是一模一样的，为消除重复代码，现决定将两个方法进行合并，并将参数更改为 User 和 Company 的联合类型。
 
 ```typescript
 import { Company } from "./Company";
@@ -1148,7 +1205,7 @@ export class Map {
 }
 ```
 
-因为在 addMarker 方法中，使用的是 User 实例和 Company 实例中的公共属性 location，所以将参数类型设置为 User | Company 是可行的。
+由于 location 属性是 User 、Company 类型中的公共属性，所以在addMarker 方法中可以直接调用。
 
 ###  4.8 增加程序扩展性
 
@@ -1158,7 +1215,7 @@ export class Map {
 addMarker(mappable: User | Company | Park | School) {}
 ```
 
-解决问题的方式是定义通用的类型接口，不论是什么类型只要满足接口规范即可，从而解决程序扩展性问题。
+解决问题的方式是定义通用的类型接口，不论是什么数据类型只要满足接口中定义的规范即可，从而解决程序扩展性问题。
 
 ```typescript
 interface Mappable {
@@ -1176,6 +1233,8 @@ addMarker(mappable: Mappable) {}
 在目前的代码中，不论是 User 类的实例还是 Company 类的实例，都是满足 Mappable 接口规范的。
 
 ### 4.9 创建标记弹框
+
+目标：在点击地图中的标记时，通过弹框展示标记信息。
 
 ```typescript
 // src/Map.ts
@@ -1242,7 +1301,7 @@ export class Company implements Mappable {
 
 ### 5.1 概述
 
-目标：实现一个通用的排序算法，使它能够对数值数组进行排序、能够对字符串进行排序等。
+目标：实现一个通用的排序算法类，使它能够对数值数组进行排序、能够对字符串进行排序等。
 
 ```typescript
 // 数值数组排序
@@ -1316,23 +1375,24 @@ npm start
 ```
 
 ```typescript
-const arr = [10, 5, 18, -3];
+let arr = [10, 5, 18, -3];
 // 外层循环控制比较的轮数
-for (var i = 0; i < arr.length - 1; i++) {
+for (let i = 0; i < arr.length - 1; i++) {
   // 内层循环控制比较的次数
-  for (var j = 0; j < arr.length - 1 - i; j++) {
-    // 将数组中的值进行两两比较
+  for (let j = 0; j < arr.length - 1 - i; j++) {
     if (arr[j] > arr[j + 1]) {
       // 交换位置
-      var temp = arr[j];
+      let leftHand = arr[j];
       arr[j] = arr[j + 1];
-      arr[j + 1] = temp;
+      arr[j + 1] = leftHand;
     }
   }
 }
 ```
 
 ### 5.5 创建排序类
+
+目标：创建排序类，通过实例化排序类创建排序对象并传递要排序的数据，调用排序对象下的 sort 方法对数据进行排序。
 
 ```typescript
 class Sorter {
@@ -1358,9 +1418,9 @@ sorter.sort();
 console.log(sorter.collection);
 ```
 
-我们已经初步实现了排序, 但目前它只能排序数值数组，我们希望如果 collection 是字符串，sort 方法依然可以进行排序。
+我们已经初步实现了排序，但目前它只能排序数值数组，我们希望如果 collection 是字符串，sort 方法依然可以进行排序。
 
-但是字符串是不可变数据结构，不能通过交换字符串中的字符位置对字符串进行排序, 所以以上排序方法并不适合字符串。
+对于数值数组来说，我们是通过交换元素的位置对其进行排序的，但是字符串是不可变数据结构，字符串中的字符是不能交换位置的, 所以以上排序代码并不适合字符串。
 
 ```typescript
 var string = "Xaa";
@@ -1370,9 +1430,11 @@ string[0] = "Y";
 
 ### 5.6  类型守卫
 
-在以上代码中，将 collection 参数的类型指定为联合类型，即参数既可以数值数组也可以是字符串。
+目标：通过联合类型和类型守卫对 collection 参数的类型进行区分，针对不同的类型进行不同的排序。
 
-在排序方法中使用类型守卫对不同的类型进行不同的处理，即在进行排序之前先判断数据类型，然后再决定用什么方式进行排序。
+类型守卫是指在操作变量之前先对变量的类型进行判断，针对不同类型的变量进行不同的操作。
+
+将 collection 参数的类型指定为联合类型，即参数既可以数值数组也可以是字符串，然后通过类型守卫针对不同的类型进行不同的处理。
 
 ```typescript
 class Sorter {
@@ -1386,13 +1448,14 @@ class Sorter {
     if (this.collection instanceof Array) {
       // 针对数组进行处理, 可以调用数组下面的属性和方法
     } else if (typeof this.collection === "string") {
+      
       // 针对字符串进行处理, 可以调用字符串下面的属性和方法
     }
   }
 }
 ```
 
-虽然通过类型守卫可以让 Sorter 类支持多种数据排序，但这种方式并不理想。如果以后要想对其它数据类型排序，我们不得不回到 Sorter 类中，在参数中继续添加联合类型，在 sort 方法中继续编写判断数据类型的方法，而且每种数据类型排序中大概率会有重复代码。
+虽然通过类型守卫可以让 Sorter 类支持多种数据的排序，但这种方式并不理想。如果以后要想对其它数据类型排序，我们不得不回到 Sorter 类中，在参数中继续添加联合类型，在 sort 方法中继续编写判断数据类型的方法，而且每种数据类型排序中大概率会有重复代码。
 
 ### 5.7 创建数值数组排序类
 
@@ -1404,7 +1467,7 @@ class Sorter {
 
 对于数值数组可以为它创建 NumbersCollection 排序类，对于字符串可以为它创建 CharacterCollection 排序类。
 
-冒泡排序的通用逻辑是指控制比较轮数的第一层for循环和控制比较次数的第二层for循环，该逻辑应该放在 Sort 类中。
+冒泡排序的通用逻辑是指控制比较轮数的第一层for循环和控制比较次数的第二层for循环，这些逻辑应该放在 Sorter 类中。
 
 冒泡排序的非通用逻辑是指数据两两比较的逻辑，数据交换位置的逻辑，获取数据长度的逻辑，这是特定数据结构排序类中要编写的代码。
 
@@ -1532,8 +1595,6 @@ console.log(string.charCodeAt(0)); // 88
 console.log(string.charCodeAt(1)); // 97
 ```
 
-
-
 ```typescript
 import { CharacterCollection } from "./CharacterCollection";
 import { Sorter } from "./Sorter";
@@ -1548,7 +1609,7 @@ console.log(characters.data);
 
 目前在对数据进行排序时，需要分别实例化数据排序类和 Sorter 类，不是特别友好。
 
-如果仅实例化数据类就可以对数据进行排序就比较理想了，要实现这个目标只需要让数据类继承 Sorter 类即可。
+如果仅实例化数据排序类就可以对数据进行排序就比较理想了，要实现这个目标只需要让数据类继承 Sorter 类即可。
 
 ```typescript
 // 以下代码为最终的调用方式
@@ -1560,6 +1621,7 @@ console.log(numbersCollection.data);
 ```typescript
 // src/NumbersCollection.ts
 import { Sorter } from "./Sorter";
+
 // 数据类继承 Sorter 类, 让数据类型拥有 sort 方法
 export class NumbersCollection extends Sorter {
   // 接收数值数组
@@ -1655,7 +1717,7 @@ characters.sort();
 console.log(characters.data);
 ```
 
-在当前案例中，我们通过继承的方式从父类中获取了公共的 sort 方法，因为 sort 方法在执行后要调用子类的一些特定方法，所有又通过抽象类的方法约束了子类必须实现的一些属性和方法。
+在当前案例中，我们通过继承的方式从父类中获取了公共的 sort 方法，因为 sort 方法在执行后要调用子类的一些特定方法，所有又通过抽象类的方式约束了子类必须实现的一些属性和方法。
 
 ## 6. 统计数据案例
 
@@ -1699,6 +1761,8 @@ npm install nodemon concurrently @types/node
 ```
 
 ### 6.3 需求 -> CSV 数据解析
+
+目标：将 CSV 文件中的内容字符串解析为数组对象。
 
 ```typescript
 // src/index.ts
@@ -1785,7 +1849,7 @@ else if (match[2] === "Man United" && match[5] === matchResult.awayWin) {}
 
 在 TypeScript 中，可以使用枚举解决上述问题。
 
-枚举表示可能的结果，是一组密切相关的值，可以限定值的范围，比如比赛结果，考试成绩，颜色种类，性别等等。
+枚举表示可能的结果，是一组密切相关且有限的值，可以限定值的范围，比如比赛结果，考试成绩，颜色种类，性别等等。
 
 所以从代码可阅读的角度出发，以上问题的最佳解决方案就是使用枚举， 对象并没有明确的限定值的范围的含义。
 
@@ -1805,18 +1869,19 @@ else if (match[2] === "Man United" && match[5] === MatchResult.awayWin) {}
 枚举也可以作为类型检查的依据。
 
 ```typescript
-const result: "A" | "H" | "D" = "A";
-
-function printMatchResult(): MatchResult {
-  switch (result) {
-    case "H":
-      return matchResult.homeWin;
-    case "A":
-      return matchResult.awayWin;
-    case "D":
-      return matchResult.draw;
-  }
+enum Sizes {
+  Small = "small",
+  Medium = "medium",
+  Large = "large",
 }
+
+let selected: Sizes = Sizes.Small;
+
+function updateSize(size: Sizes) {
+  selected = size;
+}
+
+updateSize(Sizes.Large);
 ```
 
 #### 6.5.3 何时使用枚举
@@ -1834,11 +1899,11 @@ function printMatchResult(): MatchResult {
 
 #### 6.6.1 概述
 
-在当前代码中仍然存在的问题是，数据的来源代码是硬编码的，是读取的本地CSV文件，如果将来代码中的数据来源发生变化，比如更改为向服务器发送请求获取足球数据，此时我们不得不删除所有和当前数据来源相关的代码，重新编写新的数据来源代码，这不仅浪费时间，而且对于代码的重用是非常不利的，也许将来我们仍然要读取本地的CSV文件呢，难道要重写再写一遍吗？
+在当前代码中仍然存在的问题是，数据的来源代码是硬编码的，是读取的本地CSV文件，如果将来代码中的数据来源发生变化，比如更改为向服务器发送请求获取足球比赛数据，此时我们应该怎么办呢？删除旧代码重新编写新的数据来源代码？如果真的这样做，对于代码的重用是非常不利的，也许将来我们仍然要读取本地的CSV文件呢，难道要重写再写一遍吗？
 
-解决上述问题的方法是将不同的获取数据来源的代码编写到不同的类中，比如读取 CSV 文件的类，向服务端发送请求获取数据的类，使用什么数据源就实例化对应的类就可以了，就算更改数据源也仅仅是删除少量的和实例化相关的代码，所有的核心代码都还在，将来要重新使用该数据源，只需要重新实例化就行了。
+解决上述问题的方法是将不同的获取数据来源的代码编写到不同的类中，比如读取本地 CSV 文件的类，向服务端发送请求获取数据的类，使用什么数据源就实例化对应的类就可以了，就算更改数据源也仅仅是删除少量的和实例化相关的代码，所有的核心代码都还在，将来要重新使用该数据源，只需要重新实例化就行了。
 
-#### 6.6.2 创建CSV文件读取器类
+#### 6.6.2 创建读取本地CSV文件的类
 
 ```typescript
 // CsvFileReader.ts
@@ -1847,7 +1912,7 @@ import fs from "fs";
 export class CsvFileReader {
   // 用于存储 CSV 文件读取结果
   data: string[][] = [];
-  // 接收 CSV 文件名称
+  // 接收要读取的 CSV 文件路径
   constructor(public filename: string) {}
   // 读取 CSV 文件内容并对内容进行转换
   read(): void {
@@ -1954,9 +2019,11 @@ reader.data[0][0];
 
 #### 6.8.2 ① 基于继承的重构
 
+通过逻辑拆分可以使 CsvFileReader 类变得可复用。
+
 ##### 1. 抽象类
 
-为不同的 CSV 文件创建不同的读取类，在特定读取类中放特定逻辑，在 CsvFileReader 类中放公共逻辑。 
+为不同的 CSV 文件创建不同的读取类，在特定类中放置特定逻辑，然后让它继承 CsvFileReader 类，父类调用子类提供了特定逻辑。
 
 将 CsvFileReader 变成抽象类，在抽象类中创建抽象方法 mapRow，其他类在继承该类时必须实现该方法，用于实现各自的数据格式转换的逻辑。
 
@@ -2006,7 +2073,7 @@ export class MatchReader extends CsvFileReader {
 
 ##### 2. 泛型
 
-在以上代码中我们又遇到了一个问题，CsvFileReader 类中的 data 属性的类型以及 mapRow 方法的返回值的类型都无法指定了。
+在以上代码中我们又遇到了一个问题，CsvFileReader 类中的 data 属性的类型以及 mapRow 方法的返回值的类型都无法指定了，因为在定义 CsvFileReader 类时，我们并不知道将来它会读取具有什么数据类型的 Csv 文件。
 
 以上问题可以通过 TypeScript 中的泛型进行解决，那么什么是泛型呢？
 
@@ -2064,9 +2131,9 @@ reader.read();
 
 #### 6.8.3 ② 基于组合的重构
 
-创建 CsvFileReader 类，data 属性负责存储文件读取结果，read 方法负责读取文件。
+在 CsvFileReader 类中，data 属性负责存储文件读取结果，read 方法负责读取文件。
 
-创建 MatchReader 类型，接收 CsvFileReader 实例对象，load 方法负责调用 CsvFileReader 对象中的 read 方法读取文件内容，文件内容读取完成后调用 CsvFileReader 对象中的 data 属性获取读取结果，读取结果获取完成后执行自定义处理逻辑，处理完成后使用 matches 属性存储最终处理结果。
+在 MatchReader 类中，接收 CsvFileReader 实例对象，load 方法负责调用 CsvFileReader 对象中的 read 方法读取文件内容，文件内容读取完成后调用 CsvFileReader 对象中的 data 属性获取读取结果，读取结果获取完成后执行自定义处理逻辑，处理完成后使用 matches 属性存储最终处理结果。
 
 ```typescript
 import fs from "fs";
@@ -2133,8 +2200,8 @@ for (let match of matchReader.matches) {}
 
 在目前的代码中，我们仅仅是分析了曼联球队赢得比赛的次数并在控制台中打印了分析结果。试想一下，如果我们想分析其他球队赢得比赛的次数或者其他球队输得比赛的次数，代码该怎么写？如果我们不想在控制台中输出分析结果，想在 HTML 文件中存储分析结果代码又该怎么写？
 
-1. 为使代码更具扩展性，需要为不同的分析行为创建不同的类，为不同的输出行为创建不同的类，再创建一个用于组合分析行为和输出行为的类。
-2. 为使组合类正常工作，需要创建约束分析行为类的接口规范，创建约束输出行为类的接口规范。
+1. 为使代码更具扩展性、复用性，我们会为不同的分析行为创建不同的类，为不同的输出行为创建不同的类，然后再创建一个用于组合分析行为和输出行为的类。
+2. 为使组合类能够正常工作，我们需要创建约束分析行为类的接口规范，创建约束输出行为类的接口规范。
 
 ```typescript
 const summary = new Summary(
@@ -2160,7 +2227,7 @@ import { MatchData } from "./MatchData";
 
 // 用于约束分析行为的接口
 export interface Analyzer {
-  // 用于实现分析过程的方法, 接收比赛信息作为参数, 返回分析结果
+  // 用于实现分析过程的方法, 接收比赛结果列表作为参数, 返回分析结果
   run(matches: MatchData[]): string;
 }
 
@@ -2188,7 +2255,7 @@ export class Summary {
 
 #### 6.9.3 创建分析类
 
-需求：分析球队赢得比晒的次数。
+需求：分析球队赢得比赛的次数。
 
 ```typescript
 // src/Analyzers/WinsAnalysis.ts
@@ -2276,20 +2343,20 @@ summary.buildAndPrintReport(matchReader.matches);
 ```typescript
 // src/MatchReader.ts
 export class MatchReader {
-  static fromCSV(filename: string): MatchReader {
+  static fromCSVFile(filename: string): MatchReader {
     return new MatchReader(new CsvFileReader(filename));
   }
 }
 ```
 
 ```typescript
-const matchReader = MatchReader.fromCSV("football.csv");
+const matchReader = MatchReader.fromCSVFile("football.csv");
 matchReader.load();
 ```
 
 ## 7. 泛型
 
-泛型是指将类型作为参数进行传递，通过参数传递解决代码复用问题。
+泛型是指将类型作为参数进行传递，通过参数的传递解决代码复用问题。
 
 ### 7.1  泛型类
 
@@ -2309,7 +2376,7 @@ class ArrayOfStrings {
 }
 ```
 
-在以上代码中，数值数组类和字符串数组类所做的事情是一样的，但由于类型不同，所以写成了两个类，它们属于重复代码。
+在以上代码中，数值数组类和字符串数组类所做的事情是一样的，但由于创建的数据类型不同，所以写成了两个类，它们属于重复代码。
 
 在 TypeScript 中使用泛型可以完美解决以上代码复用的问题。
 
@@ -2391,7 +2458,16 @@ printHousesOrCars<Hourse>(new Hourse());
 #### 8.1.2 创建应用
 
 ```bash
-	x# 全局安装 parcel 构建工具npm install parcel@2.4.1 -g# 创建应用目录并进入mkdir web && cd web# 创建应用工程文件npm init -y# 创建源码目录并进入mkdir src && cd src# 创建应用逻辑入口文件touch index.tsbash
+# 全局安装 parcel 构建工具
+npm install parcel@2.4.1 -g
+# 创建应用目录并进入
+mkdir web && cd web
+# 创建应用工程文件
+npm init -y
+# 创建源码目录并进入
+mkdir src && cd src
+# 创建应用逻辑入口文件
+touch index.ts
 ```
 
 ```typescript
@@ -2445,7 +2521,7 @@ import { User } from "./models/User";
 const user = new User({ name: "张三", age: 20 });
 
 // 属性"data"为私有属性, 只能在类"User"中访问。ts(2341)
-console.log(user.data);
+// console.log(user.data);
 console.log(user.get("name"));
 console.log(user.get("age"));
 ```
@@ -2461,7 +2537,8 @@ console.log(user.get("age"));
 export class User {
   // 通过 UserProps 接口规范可以要求开发者在修改信息时, 只能修改规范中定义的属性, 而且值也必须要符合要求的类型
   set(update: UserProps) {
-    Object.assign(this.data, update);
+    // Object.assign(this.data, update);
+    this.data = {...this.data, ...update}
   }
 }
 ```
@@ -2657,6 +2734,8 @@ user.save();
 
 目前代码中存在的问题是所有功能都写在了 User 类中，包括一些可以在不同模型类中复用的代码。
 
+比如获取设置数据的方法、事件系统、与服务器端同步状态的代码在其他的模型类中也会使用。
+
 而我们要做的事情就是将这些可以复用的代码抽取到不同的类中，然后再通过组合的方式将它们进行重组。
 
 #### 8.3.2 提取事件系统
@@ -2714,6 +2793,7 @@ export class User {
 第一步：创建 Sync 类，用于放置和状态同步相关的代码。
 
 ```typescript
+// src/models/Sync.ts
 import axios, { AxiosPromise } from "axios";
 import { UserProps } from "./User";
 
@@ -2881,12 +2961,12 @@ import { UserProps } from "./User";
 
 const userAttributes = new Attributes<UserProps>({ id: 1, name: "张三", age: 20 });
 // 类型 "sex" 的参数不能赋给类型 "id" | "name" | "age" 的参数
-Attributes.get("sex");
+userAttributes.get("sex");
 ```
 
 虽然以上代码解决了 get 方法的参数类型问题，但是代码如果这样写的话就不能复用了，因为不同的数据拥有的属性是不一样的。
 
-在 TypeScript 中 keyof 运算符可以得到类型属性字面量联合类型。
+在 TypeScript 中通过 keyof 运算符可以得到类型属性字面量联合类型。
 
 ```typescript
 export interface UserProps {
@@ -2922,7 +3002,7 @@ export class Attributes<T> {
 
 <img src="./images/12.png" align="left" width="50%"/>
 
-但是在以上代码中 get 方法的返回值是联合类型，这就导致在使用返回值时编辑器中只能提示联合类型中的公共数据和方法。
+但是在以上代码中 get 方法的返回值被写死了，被写成了联合类型 string | number，这是不对的。
 
 **特别注意: 在演示测试代码时, 先临时删除 get 方法的参数的类型。**
 
@@ -3072,9 +3152,9 @@ user.get("name");
 
 <img src="./images/13.png" align="left" width="75%"/>
 
-产生以上错误的原因在于代码运行时 Model 类中 get 方法中的 this 指向出现了问题，它本应该指向 Model 类实例，现在指向了 User 类实例。User 类中没有 data 属性，访问 data 属性时返回 undefined，再通过 undefined 访问 name，自然就报错了。
+产生以上错误的原因在于代码运行时 Attributes 类中 get 方法中的 this 指向出现了问题，它本应该指向 Attributes 类实例，现在指向了 User 类实例。User 类中没有 data 属性，访问 data 属性时返回 undefined，再通过 undefined 访问 name，自然就报错了。
 
-解决以上问题的办法是将 Model 类中的 get 方法更改为箭头函数，因为箭头函数不绑定 this，所以外部无论怎样调用都不会更改 this 指向。
+解决以上问题的办法是将 Attributes 类中的 get 方法更改为箭头函数，因为箭头函数不绑定 this，所以外部无论怎样调用都不会更改 this 指向。
 
 ```typescript
 // src/models/Attributes.ts
@@ -3109,7 +3189,7 @@ user.trigger("click");
 
 #### 8.4.1 添加 set 方法 (User)
 
-目标：在更改模型数据时，自动触发 change 事件。
+目标：在 User 模型类中添加 set 方法，目的一的减少属性调用层级，目的二是在更改数据时要自动触发 change 事件。
 
 自动触发 change 事件的原因是将来当数据发生更改时应用程序的其他部分要随之更新。
 
@@ -3167,7 +3247,7 @@ user.fetch();
 
 目标：在 User 类中添加 save 方法，用于与服务端通讯，添加用户、修改用户，成功后触发 save 事件，失败后触发 error 事件。
 
-由于在执行创建和修改操作时，需要将模型实例整体传入到 Sync 类中的 save 方法中，所以在 Model 中添加一个用于获取实例的方法。
+由于在执行创建和修改操作时，需要将模型实例整体传入到 Sync 类的 save 方法中，所以在 Model 中添要加一个用于获取实例的方法。
 
 ```typescript
 // src/models/Attributes.ts
@@ -3210,7 +3290,7 @@ user.save();
 
 <img src="./images/46.png" align="left" width="35%"/>
 
-第一步：创建 Model 类型，让 User 数据模型类继承 Model 类，从而获取数据模型类中的可以复用的属性和方法。
+第一步：创建 Model 类，让 User 数据模型类继承 Model 类，从而获取数据模型类中的可以复用的属性和方法。
 
 ```typescript
 // src/models/Model.ts
@@ -3461,7 +3541,7 @@ userCollection.fetch();
 
 #### 8.7.1-创建通用集合类
 
-在刚刚创建的用户集合类中，它的问题就在于只能获取用户集合数据，接下来我们要将它改造成能够获取任何集合数据的通过集合类。
+在刚刚创建的用户集合类中，它的问题就在于只能获取用户集合数据，接下来我们要将它改造成能够获取任何集合数据的通用集合类。
 
 ```typescript
 // src/models/Collection.ts
@@ -3514,7 +3594,7 @@ userCollection.fetch();
 
 #### 8.7.2 创建获取集合的静态方法
 
-在目前的代码中存在的问题在于创建集合时泛型参数的传递还是比较麻烦的，我们可以在 User 类中暴露一个用于创建用户集合的静态方法，以简化创建用户集合的相关逻辑代码。
+目前代码中存在的问题是创建集合时泛型参数的传递还是比较麻烦的，我们可以在 User 类中暴露一个用于创建用户集合的静态方法，以简化创建用户集合的相关逻辑代码。
 
 ```typescript
 // src/models/User.ts
@@ -3582,6 +3662,10 @@ userForm.render();
 
 目标：为模板中的任意元素附加任意事件。
 
+第一步：创建事件关系映射表。
+
+第二步：在渲染模板时为元素绑定事件。
+
 ```typescript
 export class UserForm {
   // 返回[元素][事件名称][事件处理函数]映射表
@@ -3593,6 +3677,10 @@ export class UserForm {
 
   onButtonClick() {
     console.log("clicked");
+  }
+  
+  render() {
+    this.bindEvents(templateElement.content);
   }
 
   // 事件绑定
@@ -3644,7 +3732,6 @@ import { UserForm } from "./views/UserForm";
 import { User } from "./models/User";
 
 const user = User.buildUser({ name: "张三", age: 20 });
-
 const userForm = new UserForm(document.querySelector("#root"), user);
 userForm.render();
 ```
@@ -3777,7 +3864,7 @@ if (root) {
 
 ### 8.9 重构-提取复用代码
 
-#### 8.9.1 创建视图类
+#### 8.9.1 创建通用视图类
 
 目标：创建 View 类，包含和视图相关的通用逻辑，其他具体的视图类通过继承该类拥有一些特定功能。
 
@@ -3871,7 +3958,7 @@ export class UserForm extends View {
 
 #### 8.9.2  通过泛型指定模型参数类型
 
-目标：通过泛型的方式指定视图类中接收的模型数据的参数的类型。
+目标：通过泛型的方式指定视图类中接收的模型数据参数的类型。
 
 ```typescript
 // src/views/View.ts
@@ -4084,7 +4171,7 @@ if (root) {
 }
 ```
 
-#### 8.10.5 创建集合视图类
+#### 8.10.5 创建通用集合视图类
 
 目标：创建一个用于渲染集合模型数据的通用视图类。
 
@@ -4180,127 +4267,337 @@ npx create-react-app <appname> --template typescript
 
 如果文件中不包含任何 JSX 代码，文件后缀使用 `ts`
 
-### 9.2 为组件添加类型
+### 9.2 props
 
-在我们定义了组件以后，TypeScript 编译器并不知道我们定义的是组件，它会认为我们定义的就是一个普通的函数。
-
-在类型认知出现偏差以后，TypeScript 编译器不能正确的对我们的代码进行约束。
-
-比如在下列代码中，我们通过组件获取组件下的属性，TypeScript 编译器会报错，说组件下不存在这个属性。
-
-当 TypeScript 编译器知道我们定义的是组件以后，当我们错误的使用了组件以后，它才能准确的为我们进行提示。
+通过为组件的 props 参数定义类型，编译器可以检查父组件在调用该组件时是否正确的传递了 props，编译器可以检查在子组件内部是否正确的使用了 props。 调用组件时检测有没有传，传的是否合法，在组件内部使用时有代码提示。
 
 ```tsx
-const Child= () => {
-  return <div>Child</div>;
-};
-
-// 类型 "() => Element" 上不存在属性 "displayName"。
-console.log(Child.displayName);
-// 类型 "() => Element" 上不存在属性 "defaultProps"。
-console.log(Child.defaultProps);
-```
-
-```tsx
-import { FC } from "react";
-
-const Child: FC = () => {
-  return <div>Child</div>;
-};
-```
-
-### 9.3 Props
-
-为组件的 props 参数定义类型，编译器可以检查父组件在调用该组件时是否正确的传递了 props，在子组件内部是否正确的使用了 props。 
-
-```tsx
-// src/props/Child.tsx
-interface Props {
-  color: string;
+// src/Hello.tsx
+type HelloProps = {
+  greet: string;
   onClick: () => void;
+};
+
+function Hello(props: HelloProps) {
+  return <div onClick={props.onClick}>{props.greet}</div>;
+}
+```
+
+```tsx
+// src/App.tsx
+import Hello from "./Hello";
+
+function App() {
+  return <Hello greet={"Hello TypeScript"} onClick={() => alert("clicked")} />;
+}
+```
+
+
+
+```tsx
+// src/Status.tsx
+type StatusProps = {
+  status: "loading" | "success" | "error";
+};
+
+function Status(props: StatusProps) {
+  return <div>{props.status}</div>;
+}
+```
+
+```tsx
+import Status from "./Status";
+
+function App() {
+  return <Status status={"loading"} />;
+}
+```
+
+
+
+```tsx
+// src/Oscar.tsx
+import React from "react";
+
+type OscarProps = {
+  children: React.ReactNode;
+};
+
+// type ReactNode = ReactElement | string | number | ReactFragment | ReactPortal | boolean | null | undefined;
+
+function Oscar(props: OscarProps) {
+  return <div>{props.children}</div>;
+}
+```
+
+```tsx
+// src/App.tsx
+import Oscar from "./Oscar";
+
+function App() {
+  return (
+    <Oscar>
+      <div>Hello</div>
+    </Oscar>
+  );
+}
+```
+
+
+
+```tsx
+// src/Oscar.tsx
+import React from "react";
+
+type OscarProps = React.PropsWithChildren<{ greet: string }>;
+
+// type PropsWithChildren<P> = P & { children?: ReactNode | undefined };
+
+function Oscar(props: OscarProps) {
+  return (
+    <div>
+      {props.greet} {props.children}
+    </div>
+  );
+}
+```
+
+```tsx
+// src/App.tsx
+import Oscar from "./Oscar";
+
+function App() {
+  return (
+    <Oscar greet={"Hello"}>
+      <div>Hello</div>
+    </Oscar>
+  );
+}
+```
+
+
+
+```tsx
+// src/Container.tsx
+import React from "react";
+
+type ContainerProps = {
+  styles: React.CSSProperties;
+};
+
+function Container(props: ContainerProps) {
+  return <div style={props.styles}></div>;
+}
+```
+
+```tsx
+// src/App.tsx
+import Container from "./Container";
+
+function App() {
+  return <Container styles={{ width: 200, height: 200, backgroundColor: "skyblue" }} />;
+}
+```
+
+
+
+```tsx
+// src/Private.tsx
+import React from "react";
+
+type PrivateProps = {
+  component: React.ComponentType;
+};
+
+function Private(props: PrivateProps) {
+  return <props.component />;
+}
+```
+
+```tsx
+// src/App.tsx
+import Private from "./Private";
+
+function App() {
+  return <Private component={Greet} />;
 }
 
-const Child: FC<Props> = ({ color, onClick }) => {
-  return <div onClick={onClick}>{color}</div>;
+function Greet() {
+  return <div>Hello</div>;
+}
+```
+
+
+
+```tsx
+// // src/List.tsx
+type ListProps<T> = {
+  items: T[];
 };
+
+function List<T extends string | number>(props: ListProps<T>) {
+  return (
+    <ul>
+      {props.items.map((item) => {
+        if (typeof item === "string") {
+          return <li key={item}>{item.toUpperCase()}</li>;
+        }
+        return <li key={item}>{item.toFixed(2)}</li>;
+      })}
+    </ul>
+  );
+}
 ```
 
 ```tsx
-// src/props/Parent.tsx
-const Parent = () => {
-  return <Child color="red" onClick={() => console.log("clicked")} />;
-};
+// src/App.tsx
+import List from "./List";
+
+function App() {
+  return <List<string> items={["a", "b"]} />;
+}
 ```
 
-### 9.4 state
 
-```react
-// src/state/Guests.tsx
-import { useState, FC } from "react";
 
-const Guests: FC = () => {
+### 9.3 state
+
+```tsx
+// src/Guest.tsx
+import React, { useState } from "react";
+
+function Guest() {
   const [name, setName] = useState<string>("");
   // 此处如果不为 guests 指定类型, 类型将会是 never[]
   const [guests, setGuests] = useState<string[]>([]);
-  const clickHandler = () => {
-    setName("");
-    // 如果 guests 是 never[], 那么字符串 name 将不能被存储到 guests 数组中
-    setGuests([...guests, name]);
-  };
   return (
     <>
-      <ul> {guests.map((guest) => <li key={guest}>{guest}</li>)}</ul>
-      <input type="text" value={name} onChange={(event) => setName(event.target.value)}/>
-      <button onClick={clickHandler}>add</button>
+      <input
+        type="text"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
+      <button
+        onClick={() => {
+          setName("");
+          // 如果 guests 是 never[], 那么字符串 name 将不能被存储到 guests 数组中
+          setGuests([...guests, name]);
+        }}
+      >
+        add
+      </button>
+      <ul>
+        {guests.map((guest) => (
+          <li key={guest}>{guest}</li>
+        ))}
+      </ul>
     </>
   );
-};
+}
 ```
 
-```react
+```tsx
 // src/state/UserSearch.tsx
-import { useState, FC } from "react";
+import { useState } from "react";
 
 const users = [
   { name: "张三", age: 20 },
   { name: "李四", age: 30 },
 ];
 
-const UserSearch: FC = () => {
+function Search() {
   const [name, setName] = useState<string>("");
   // 组件初次渲染时, user 的类型是 undefined
   // 在找到 user 以后, 它的类型是 {name: string, age: number}
   // 所以 user 的类型就应该是 {name: string, age: number} | undefined
   const [user, setUser] = useState<{ name: string; age: number } | undefined>();
-	// 搜索用户
+  // 搜索用户
   const searchHandler = () => {
     // find 方法的返回值可能是 user, 也可能是 undefined
-    setUser(
-    	users.find((user) => user.name === name)
-    );
+    setUser(users.find((user) => user.name === name));
   };
   return (
     <>
-      <input type="text" value={name} onChange={(event) => setName(event.target.value)} />
+      <input
+        type="text"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
       <button onClick={searchHandler}>search</button>
       {user && JSON.stringify(user)}
     </>
   );
-};
+}
 ```
 
-### 9.5 事件对象
 
-```react
-// src/event/EventComponent.tsx
-import { ChangeEvent, FC, DragEvent } from "react";
 
-const EventComponent: FC = () => {
-  // 参数"event"隐式具有"any"类型
-  const changeHandler = (event: ChangeEvent<HTMLInputElement>) => {
+```tsx
+import { useReducer } from "react";
+
+type CounterState = {
+  count: number;
+};
+
+type UpdateAction = {
+  type: "increment" | "decrement";
+  payload: number;
+};
+
+type ResetAction = {
+  type: "reset";
+};
+
+type CounterAction = UpdateAction | ResetAction;
+
+const initialState: CounterState = { count: 0 };
+
+function reducer(state: CounterState, action: CounterAction): CounterState {
+  switch (action.type) {
+    case "increment":
+      return { count: state.count + action.payload };
+    case "decrement":
+      return { count: state.count - action.payload };
+    case "reset":
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  return (
+    <>
+      <button onClick={() => dispatch({ type: "increment", payload: 1 })}>
+        +1
+      </button>
+      <span>{state.count}</span>
+      <button onClick={() => dispatch({ type: "decrement", payload: 1 })}>
+        -1
+      </button>
+      <button onClick={() => dispatch({ type: "reset" })}>reset</button>
+    </>
+  );
+}
+
+export default Counter;
+```
+
+### 9.4 event
+
+```tsx
+// src/EventObject.tsx
+import React from "react";
+
+function EventObject() {
+  const clickHandler = (event: React.MouseEvent<HTMLButtonElement>) => {
+    console.log(event.target);
+  };
+  const changeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log(event.target.value);
   };
-  const dragStartHandler = (event: DragEvent<HTMLDivElement>) => {
+  const dragStartHandler = (event: React.DragEvent<HTMLDivElement>) => {
     // event.target: 返回触发事件的元素
     // event.currentTarget: 返回绑定事件的元素
     console.log(event.target);
@@ -4308,33 +4605,36 @@ const EventComponent: FC = () => {
   };
   return (
     <>
+      <button onClick={clickHandler}>button</button>
       <input type="text" onChange={changeHandler} />
-      <div draggable onDragStart={dragStartHandler}> drag event </div>
+      <div draggable onDragStart={dragStartHandler}>
+        drag event{" "}
+      </div>
     </>
   );
-};
+}
 ```
 
 <img src="images/43.gif" align="left"/>
 
-### 9.6 ref
+### 9.5 ref
 
 `src/ref/RefComponent.tsx`
 
 ```tsx
-import { FC, useRef, useEffect } from "React";
+import { useRef, useEffect } from "react";
 
-const RefComponent: FC = () => {
+function RefComponent() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (!inputRef.current) return;
     inputRef.current.focus();
   }, []);
   return <input ref={inputRef} />;
-};
+}
 ```
 
-### 9.7 Redux
+### 9.6 Redux
 
 ```bash
 npm install redux redux-thunk axios react-redux @types/react-redux --save-exact
@@ -4619,9 +4919,1019 @@ const Packages: FC = () => {
 };
 ```
 
+## 10. 装饰器
 
+### 10.1 属性描述符
 
+通过属性描述符可以决定属性值是否可更改(writable)、属性是否可枚举(enumerable)、属性的值(value)、属性是否可以被删除(configurable)。
 
+### 10.2 装饰器概述
+
+装饰器和类一起使用，通过装饰器可以为类附加功能，对类功能进行增强。
+
+装饰器其实就是函数，可以接收类构造函数、类原型对象等作为参数，在函数内部编写对类功能进行扩展的逻辑。
+
+装饰器是实验性特性, 要使用它必须先在 tsconfig.json 文件中通过配置项开启它。
+
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true
+  }
+}
+```
+
+根据装饰器装饰的目标不同，装饰器可以分为类装饰器、类属性装饰器、类方法装饰器、类属性值存取器装饰器、参数装饰器。
+
+### 10.3 类方法装饰器
+
+在将装饰器应用于类方法时，它的第一个参数是类的原型对象，第二个参数是类方法名称，第三个参数是属性描述符。
+
+装饰器函数在声明类时被自动调用且只调用这一次，它的调用和实例化没有关系。
+
+```typescript
+class Boat {
+  @testDecorator
+  pilot() {
+    console.log("swish");
+  }
+}
+
+function testDecorator(target: any, key: string, desc: PropertyDescriptor) {
+  console.log(target);
+  console.log(target.constructor === Boat);
+  console.log(key);
+  console.log(desc);
+}
+```
+
+装饰器只是函数调用的语法糖，通过以下代码模拟可以得到相同的效果。
+
+```typescript
+testDecorator(Boat.prototype, "pilot");
+```
+
+目标：创建用于捕获类方法执行错误的装饰器。
+
+```typescript
+class Boat {
+  @logError
+  pilot() {
+    throw new Error();
+  }
+}
+
+function logError(target: any, key: string, desc: PropertyDescriptor) {
+  const method = desc.value;
+  desc.value = function () {
+    try {
+      method();
+    } catch (e) {
+      console.log("发生了错误");
+    }
+  };
+}
+
+const boat = new Boat();
+boat.pilot();
+```
+
+### 10.4 装饰器工厂函数
+
+通过装饰器工厂函数可以在调用装饰器函数时为其传递参数，比如 logError 装饰器中，为其传递要输出的错误信息。
+
+```typescript
+class Boat {
+  @logError("😯😯😯😯😯😯")
+  pilot() {
+    throw new Error();
+    console.log("swish");
+  }
+}
+
+function logError(errMsg: string) {
+  return function (target: any, key: string, desc: PropertyDescriptor) {}
+}
+```
+
+### 10.5 类属性装饰器
+
+类属性装饰器只有两个参数，第一个是类原型对象，第二个是属性名称。
+
+在装饰器函数内部不能获取该属性的值, 因为类属性是通过实例进行访问的，不能通过原型对象访问。
+
+装饰器函数随类声明一起执行, 就是说装饰器执行时还没有实例对象。
+
+```typescript
+class Boat {
+  @testDecorator
+  color: string = "red";
+}
+
+function testDecorator(target: any, key: string) {}
+```
+
+### 10.6 属性值存储器装饰器
+
+属性值存储器装饰器有三个参数，第一个参数是类原型对象，第二个参数是属性名称，第三个参数是属性描述符。
+
+```typescript
+class Boat {
+  @testDecorator
+  get formattedColor() {
+    return `This Boats color is ${this.color}`;
+  }
+}
+
+function testDecorator(target: any, key: string, desc: PropertyDescriptor) {}
+```
+
+### 10.7 参数装饰器
+
+ 参数装饰器有三个参数，第一个参数是类原型对象，第二个参数是属性名称，第三个参数是参数索引位置。
+
+```typescript
+class Boat {
+  pilot(@parameterDecorator speed: string, @parameterDecorator weight: number) {
+    console.log("swish");
+  }
+}
+
+function parameterDecorator(target: any, key: string, index: number) {
+  console.log(target);
+  console.log(key);
+  console.log(index);
+}
+```
+
+### 10.8 类装饰器
+
+类装饰器有一个参，就是类的构造函数。
+
+```typescript
+@classDecorator
+class Boat {}
+
+function classDecorator(constructor: Function) {
+  console.log(constructor);
+}
+```
+
+### 10.9 装饰器的执行循序
+
+从类内部的装饰器开始执行，不同属性的装饰器从上到下依次执行，同一个属性的装饰器从里到外，从右到左执行，最后执行类装饰器。
+
+```typescript
+@classDecorator
+class Boat {
+  @attributeDecorator
+  color: string = "red";
+
+  @getSetDecorator
+  get formattedColor() {
+    return `This Boats color is ${this.color}`;
+  }
+
+  @methodDecorator1
+  @methodDecorator2
+  pilot(
+    @parameterDecorator speed: string,
+    @parameterDecorator weight: number
+  ) {}
+}
+
+function methodDecorator1(target: any, key: string, desc: PropertyDescriptor) {
+  console.log("method1", key);
+}
+function methodDecorator2(target: any, key: string, desc: PropertyDescriptor) {
+  console.log("method2", key);
+}
+
+function getSetDecorator(target: any, key: string, desc: PropertyDescriptor) {
+  console.log("get set");
+}
+
+function parameterDecorator(target: any, key: string, index: number) {
+  console.log("parameter", index);
+}
+
+function attributeDecorator(target: any, key: string) {
+  console.log("attribute", key);
+}
+
+function classDecorator(constructor: Function) {
+  console.log("class");
+}
+```
+
+### 10.10 装饰器参数总结
+
+类属性装饰器、类方法装饰器、属性值存取器装饰器、参数装饰器，它们的第一个参数都是类原型对象，第二个参数都是属性名称。
+
+类方法装饰器、属性值存取器的第三个参数都是属性描述符，类属性装饰器没有第三个参数，参数装饰器的第三个参数是参数索引位置。
+
+类装饰器只有一个参数就是类构造函数。
+
+## 11. 元数据
+
+### 11.1 元数据概述
+
+元数据是指在声明时为其附加的一些额外的信息，可以应用在对象或者类的身上。
+
+元数据是 ES7 中的一个提案, 目前由 reflect-metadata 库提供具体的 API 支持。
+
+```bash
+npm i reflect-metadata
+```
+
+元数据是实验性特性，要使用它必须在 tsconfig.json 文件中启用它。
+
+```json
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "target": "es5"
+  }
+}
+```
+
+注意：在 tsconfig 中将 target 选项中的值设置为 es5，目前 target 选项的默认值为 es2016。
+
+```typescript
+// ES2016: 以下写法原型方法可枚举
+class Plane {
+  fly: Function | undefined;
+}
+
+Plane.prototype.fly = function () {};
+```
+
+```typescript
+// ES2016: 以下写法原型方法不可枚举
+class Plane {
+  fly() {}
+}
+```
+
+```typescript
+// es5: 以下写法原型方法可枚举
+class Plane {
+  fly() {}
+}
+```
+
+在后续的案例中，我们希望原型是可枚举的，所以 target 选项要被设置为 es5。
+
+### 11.2 为对象添加元数据
+
+```typescript
+// 在引入 reflect-metadata 模块后, 它会在全局对象 Reflect 中添加和元数据相关的一些APi接口
+import "reflect-metadata";
+
+const plane = {
+  color: "red",
+};
+
+Reflect.defineMetadata("message", "Hello Metadata", plane);
+Reflect.defineMetadata("greeting", "Hi, more metadata", plane);
+Reflect.defineMetadata("notice", "This is a metadata", plane, "color");
+
+const message = Reflect.getMetadata("message", plane);
+const greeting = Reflect.getMetadata("greeting", plane);
+const notice = Reflect.getMetadata("notice", plane, "color");
+
+console.log(message);
+console.log(greeting);
+console.log(notice);
+```
+
+### 11.3 为类添加元数据
+
+```typescript
+import "reflect-metadata";
+
+@printMetadata
+class Plane {
+  @markFunction("Hello ReflectMetadata")
+  fly() {}
+}
+
+function markFunction(message: string) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata("message", message, target, key);
+  };
+}
+
+function printMetadata(constructor: typeof Plane) {
+  for (let key in constructor.prototype) {
+    const message = Reflect.getMetadata("message", constructor.prototype, key);
+    console.log(message);
+  }
+}
+```
+
+## 12. 装饰器案例
+
+### 12.1 目标
+
+使用装饰器和元数据重构 Express 语法。
+
+```typescript
+@controller("/auth")
+class LoginController {
+  @get("/login")
+  getLogin() {
+    return "<form></form>";
+  }
+  @post("/login")
+  @validateBody("username", "password")
+  @use(requireAuth)
+  postLogin() {}
+}
+```
+
+### 12.2 项目设置
+
+```bash
+mkdir express-decorator && cd express-decorator && mkdir src build
+npm init -y
+tsc --init
+```
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,       
+    "rootDir": "./src",
+    "outDir": "./build"
+  }
+}
+```
+
+```bash
+npm install express body-parser nodemon concurrently reflect-metadata @types/express @types/body-parser
+```
+
+```json
+// package.json
+"scripts": {
+  "start:build": "tsc -w",
+  "start:run":"nodemon build/index.js",
+  "start": "concurrently npm:start:*"
+},
+```
+
+### 12.3 创建登录页面路由
+
+<img src="./images/47.png" align="left" width="32%"/>
+
+```typescript
+// src/index.ts
+import express from "express";
+import { router } from "./routes/loginRoutes";
+
+const app = express();
+app.use(router);
+
+app.listen(3000, () => console.log("服务器启动成功, 监听3000端口"));
+```
+
+```typescript
+// src/routes/loginRoutes.ts
+import { Router } from "express";
+
+export const router = Router();
+
+router.get("/login", (req, res) => {
+  res.send(`
+    <form method="POST">
+      <div>
+        <label>Email</label>
+        <input name="email" />
+      </div>
+      <div>
+        <label>Password</label>
+        <input name="password" type="password" />
+      </div>
+      <button>Submit</button>
+    </form>
+  `);
+});
+```
+
+### 12.4 重构登录页面路由
+
+思路：使用类对应用中的路由进行分类，比如和登录相关的路由都放置在 LoginController 中，和订单相关的路由都放置在 OrderController 中。
+
+通过 get 装饰器声明路由元数据，包含请求路径和请求处理程序，通过 controller 装饰器注册路由表。
+
+目标：当访问 /auth/login 时，响应登录页面。
+
+```typescript
+// src/controllers/loginController.ts
+import { Request, Response } from "express";
+import { get } from "./decorators/routes";
+import { controller } from "./decorators/controller";
+
+@controller("/auth")
+export class LoginController {
+  @get("/login")
+  getLogin(req: Request, res: Response): void {
+    res.send(`
+      <form method="POST">
+        <div>
+          <label>Email</label>
+          <input name="email" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input name="password" type="password" />
+        </div>
+        <button>Submit</button>
+      </form>
+   `);
+  }
+}
+```
+
+创建 get 装饰器，将 get 装饰器参数，即请求路径，作为当前类方法的元数据进行存储。
+
+```typescript
+// src/controllers/decorators/routes.ts
+import "reflect-metadata";
+
+export function get(path: string) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata("path", path, target, key);
+  };
+}
+```
+
+创建 controller 装饰器，在 controller 装饰器中遍历构造函数原型对象，将原型对象中的方法作为请求处理函数，请求处理函数中的元数据作为请求路径，创建并导出路由对象，通过路由对象注册路由。
+
+```typescript
+// src/controllers/decorators/controller.ts
+import "reflect-metadata";
+import { Router } from "express";
+
+export const router = Router();
+
+export function controller(routePrefix: string) {
+  return function (constructor: Function) {
+    for (let key in constructor.prototype) {
+      const path = Reflect.getMetadata("path", constructor.prototype, key);
+      const handler = constructor.prototype[key];
+      if (path) {
+        router.get(`${routePrefix}${path}`, handler);
+      }
+    }
+  };
+}
+```
+
+在应用入口文件中导入 LoginController 和路由对象，通过中间件注册路由。
+
+在入口文件中到 LoginController 后，先执行 get 提供元数据，再执行 controller 注册路由对象表，最后在入口文件中注册路由。
+
+```typescript
+// src/index.ts
+import "./controllers/loginController";
+import { router } from "./controllers/decorators/controller";
+
+app.use(router);
+```
+
+### 12.5 一些优化
+
+① 优化 LoginController 控制器中的导入逻辑，创建装饰器统一导入口。
+
+```typescript
+// src/controllers/decorators/index.ts
+export * from "./controller";
+export * from "./routes";
+```
+
+```typescript
+// src/controllers/loginController.ts
+import { controller, get } from "./decorators";
+```
+
+② 优化路由对象的创建逻辑，使用单例模式创建路由对象。
+
+目前代码中存在的问题在于不同的控制器在导入 controller 装饰器时，每次都会重新创建路由对象。
+
+而且在 controller 装饰器文件中直接创建路由对象也不太合适，代码耦合性太强。
+
+```typescript
+// src/AppRouter.ts
+import { Router } from "express";
+
+export class AppRouter {
+  private static instance: Router;
+
+  static getInstance() {
+    if (!AppRouter.instance) {
+      AppRouter.instance = Router();
+    }
+    return AppRouter.instance;
+  }
+}
+```
+
+```typescript
+// src/controllers/decorators/controller.ts
+import { AppRouter } from "../../AppRouter";
+
+export function controller(routePrefix: string) {
+  return function (constructor: Function) {
+    // 获取路由对象实例
+    const router = AppRouter.getInstance();
+  };
+}
+```
+
+```typescript
+// src/index.ts
+import { AppRouter } from "./AppRouter";
+
+app.use(AppRouter.getInstance());
+```
+
+### 12.6 创建其他请求装饰器
+
+目前代码中存在的问题是 controller 装饰器在注册请求时，请求方法写成了固定的 get，但此处应该是什么请求就应该调用什么方法。
+
+要实现以上需求需要在 get 装饰器中定义一个用于存储请求方式的元数据，controller 装饰器执行时通过元数据获取该请求的请求方式。
+
+```typescript
+export function get(path: string) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata("path", path, target, key);
+    Reflect.defineMetadata("method", "get", target, key);
+  };
+}
+```
+
+在 HTTP 协议中除了有 get 请求以外，还有 post、put、delete 等请求，其他请求也需要创建对应的装饰器，于是代码会写成下面这种形式。
+
+```typescript
+export function get(path: string) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata("path", path, target, key);
+    Reflect.defineMetadata("method", "get", target, key);
+  };
+}
+
+export function post(path: string) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata("path", path, target, key);
+    Reflect.defineMetadata("method", "post", target, key);
+  };
+}
+```
+
+在以上代码中，为 get 请求和 post 请求分别创建了对应的装饰器，但两个请求对应的装饰器代码都是差不多的，如何简化该代码呢？
+
+由于两个方法中只有请求方式字符串不一样，所以可以利用函数柯里化思想对代码进行简化。
+
+```typescript
+function routeBinder(method: string) {
+  return function (path: string) {
+    return function (target: any, key: string) {
+      Reflect.defineMetadata("path", path, target, key);
+      Reflect.defineMetadata("method", method, target, key);
+    };
+  };
+}
+
+export const get = routeBinder("get");
+export const post = routeBinder("post");
+export const put = routeBinder("put");
+export const del = routeBinder("delete");
+export const patch = routeBinder("patch");
+```
+
+在以上代码中，请求方法可以使用枚举进行声明，一来可以防止字符串写错，二来可以提升代码可读性，三来枚举也可以作为类型使用。
+
+```typescript
+// src/controllers/decorators/Methods.ts
+export enum Methods {
+  get = "get",
+  post = "post",
+  delete = "delete",
+  put = "put",
+  patch = "patch",
+}
+```
+
+```typescript
+// src/controllers/decorators/routes.ts
+import { Methods } from "./Methods";
+
+export const get = routeBinder(Methods.get);
+export const post = routeBinder(Methods.post);
+export const put = routeBinder(Methods.put);
+export const del = routeBinder(Methods.delete);
+export const patch = routeBinder(Methods.patch);
+```
+
+在 controller 控制器中，动态获取请求方法，根据真实的请求方法进行路由表注册。
+
+```typescript
+// src/controllers/decorators/controller.ts
+import { Methods } from "./Methods";
+
+const method: Methods = Reflect.getMetadata(
+  "method",
+  constructor.prototype,
+  key
+);
+
+router[method](`${routePrefix}${path}`, handler);
+```
+
+### 12.7 元数据枚举
+
+目前代码中存在的问题是定义元数据时用到了 path 字符串和 method 字符串，在获取元数据时也用到了它们，既然是字符串编辑器就没有提示，那么在反复编写的时候就容易写错，可以通过枚举将它们定义出来，使用枚举提供的方式访问它们编辑器就有了提示，防止写错。
+
+```typescript
+// src/controllers/decorators/MetadataKeys.ts
+export enum MetadataKeys {
+  path = "path",
+  method = "method",
+}
+```
+
+```typescript
+// src/controllers/decorators/routes.ts
+import { MetadataKeys } from "./MetadataKeys";
+
+Reflect.defineMetadata(MetadataKeys.path, path, target, key);
+Reflect.defineMetadata(MetadataKeys.method, method, target, key);
+```
+
+```typescript
+// src/controllers/decorators/controller.ts
+import { MetadataKeys } from "./MetadataKeys";
+
+const path = Reflect.getMetadata(MetadataKeys.path, constructor.prototype, key);
+const method: Methods = Reflect.getMetadata(MetadataKeys.method, constructor.prototype, key);
+```
+
+### 12.8 创建挂载中间件的装饰器
+
+目标：创建一个用于在类方法上挂载中间件的装饰器，且对于同一个方法中间件是可以挂载多个的。
+
+中间件要被存储在元数据中，所以先在 MetadataKeys 枚举中添加 middleware，该属性用于在元数据中存储和获取中间件。
+
+```typescript
+// src/controllers/decorators/MetadataKeys.ts
+export enum MetadataKeys {
+  middleware = "middleware",
+}
+```
+
+创建 use 装饰器，由于一个类方法可以有多个中间件，所以 use 装饰器可能在一个方法上被多次调用，所以在 use 方法中要对中间件函数进行累加。
+
+```typescript
+// src/controllers/decorators/use.ts
+import { RequestHandler } from "express";
+import "reflect-metadata";
+import { MetadataKeys } from "./MetadataKeys";
+
+export function use(middleware: RequestHandler) {
+  return function (target: any, key: string) {
+    const middlewares =
+      Reflect.getMetadata(MetadataKeys.middleware, target, key) || [];
+
+    Reflect.defineMetadata(
+      MetadataKeys.middleware,
+      [...middlewares, middleware],
+      target,
+      key
+    );
+  };
+}
+```
+
+在 controller 装饰器中从元数据里获取中间件数组，并将中间件注册到请求中。
+
+```typescript
+// src/controllers/decorators/controller.ts
+import { MetadataKeys } from "./MetadataKeys";
+
+const middlewares = Reflect.getMetadata( MetadataKeys.middleware, constructor.prototype, key) || [];
+if (path) router[method](`${routePrefix}${path}`, ...middlewares, handler);
+```
+
+由于 use 属于装饰器，将它在同一出口中导出。
+
+```typescript
+// src/controllers/decorators/index.ts
+export * from "./use";
+```
+
+测试 use 中间件是否可以生效。
+
+```typescript
+import { Request, Response, NextFunction } from "express";
+import { use } from "./decorators";
+
+function logger(req: Request, res: Response, next: NextFunction) {
+  console.log("logger");
+  next();
+}
+
+@controller("/auth")
+export class LoginController {
+  @get("/login")
+  @use(logger)
+  getLogin(req: Request, res: Response): void {}
+}
+```
+
+### 12.9 创建接收登录请求的路由
+
+```typescript
+// src/index.ts
+import bodyParser from "body-parser";
+
+app.use(bodyParser.urlencoded({ extended: true }));
+```
+
+```typescript
+// src/controllers/loginController.ts
+import { post } from "./decorators";
+
+@controller("/auth")
+export class LoginController {
+  @post("/login")
+  postLogin(req: Request, res: Response): void {
+    const { email, password } = req.body;
+    res.send({ email, password });
+  }
+}
+```
+
+### 12.10 创建 bodyValidator 装饰器
+
+目标：创建用于验证请求体参数是否为空的装饰器，如果验证不通过直接对请求做出响应。
+
+思路：创建 bodyValidator 装饰器，用于将要验证的请求参数名称存储在元数据中，创建 bodyValidators 方法，接收要验证的请求参数名称，该方法要返回一个中间件函数，在中间件函数中验证请求中是否包含必要的参数。在 controller 装饰器里从元数据中获取要验证的请求参数名称，将其传递给 bodyValidators 方法，接收其返回的中间件函数，将中间件函数注册到路由中，以下代码为最终调用方式。
+
+```typescript
+export class LoginController {
+  @post("/login")
+  @bodyValidator("email", "password")
+  postLogin() {}
+}
+```
+
+请求参数名称要被存储在元数据中，所以先在 MetadataKeys 枚举中添加 validator，该属性用于在元数据中存储和获取请求参数名称。
+
+```typescript
+// src/controllers/decorators/MetadataKeys.ts
+export enum MetadataKeys {
+  validator = "validator",
+}
+```
+
+创建 bodyValidator 装饰器，将要验证的请求参数存储在元数据中。
+
+```typescript
+// src/controllers/decorators/bodyValidator.ts
+import "reflect-metadata";
+import { MetadataKeys } from "./MetadataKeys";
+
+export function bodyValidator(...keys: string[]) {
+  return function (target: any, key: string) {
+    Reflect.defineMetadata(MetadataKeys.validator, keys, target, key);
+  };
+}
+```
+
+创建 bodyValidators 方法，接收要验证的请求参数数组，在返回的中间件函数中编写验证代码。
+
+```typescript
+// src/controllers/decorators/controller.ts
+import { RequestHandler } from "express";
+
+function bodyValidators(keys: string[]): RequestHandler {
+  return function (req: Request, res: Response, next: NextFunction) {
+    for (let key of keys) {
+      if (!req.body[key]) return res.status(422).send("请求格式有问题");
+    }
+    next();
+  };
+}
+```
+
+在 controller 装饰器中从元数据中获取要验证的参数数组，调用 bodyValidators 方法传递要验证的参数并接受返回的中间件函数。
+
+将中间件函数注册到路由中，使验证生效。
+
+```typescript
+// src/controllers/decorators/controller.ts
+const requiredBodyProps = Reflect.getMetadata(MetadataKeys.validator, constructor.prototype, key) || [];
+const validator = bodyValidators(requiredBodyProps);
+if (path) router[method](`${routePrefix}${path}`, ...middlewares, validator, handler);
+```
+
+测试代码是否生效。
+
+```typescript
+@controller("/auth")
+export class LoginController {
+  @post("/login")
+  @bodyValidator("email", "password")
+  postLogin(req: Request, res: Response): void {}
+}
+```
+
+### 12.11 约束请求处理函数的类型
+
+目前代码中存在的问题在于被请求装饰器装饰的函数可以是任意类型，但实际上被装饰的函数应该是 RequestHandler 类型。
+
+目标：使用接口继承的方式改写类型。
+
+```typescript
+// 接口继承示例
+interface Sizes {
+  sizes: string[];
+  getAvailableSizes(): string[];
+}
+
+interface Pizza extends Sizes {
+  name: string;
+}
+
+let pizza: Pizza = {
+  name: "张三",
+  sizes: ["large", "small"],
+  getAvailableSizes() {
+    return this.sizes;
+  },
+};
+```
+
+```typescript
+export class LoginController {
+  @get("/")
+  add(n: number, m: number) {
+    return n + m;
+  }
+}
+```
+
+```typescript
+// src/controllers/decorators/routes.ts
+interface RouteHandlerDescriptor extends PropertyDescriptor {
+  value?: RequestHandler;
+}
+
+function routeBinder(method: string) {
+  return function (path: string) {
+    return function (target: any, key: string, desc: RouteHandlerDescriptor) {};
+  };
+}
+```
+
+## 13. 其他
+
+### 13.1 is
+
+is 用于加强 TypeScript 类型推断，可以缩小类型的范围。
+
+```typescript
+// isString 函数的返回值为布尔类型
+// 如果 isString 函数的返回值为 true, TypeScript 编译器就认定 s 是字符串类型
+function isString(s: any): s is string {
+  return typeof s === "string";
+}
+
+function toUpperCase(x: any) {
+  if (isString(x)) {
+    return x.toUpperCase();
+  }
+}
+```
+
+### 13.2 函数重载
+
+需求：调用 getMessage 方法获取消息，如果传递的参数是数值类型，则表示根据消息 id 获取消息，返回值为对象类型，表示一条消息，如果传递的参数是字符串类型，则表示根据消息种类获取消息，返回值为数组类型，表示一组消息。
+
+函数重载：根据函数入参类型的不同或入参个数的不同，设置不同的返回值类型。
+
+```typescript
+// 消息种类的类型
+type MessageType = "string" | "image" | "audio";
+```
+
+```typescript
+// 消息对象的类型
+type Message = {
+  id: number;
+  type: MessageType;
+  content: string;
+};
+```
+
+```typescript
+// 消息数组
+const data: Message[] = [
+  { id: 1, type: "string", content: "hello-1" },
+  { id: 2, type: "image", content: "hello-2" },
+  { id: 3, type: "audio", content: "hello-3" },
+];
+```
+
+```typescript
+function getMessage(id: number): Message | undefined;
+function getMessage(type: MessageType): Message[];
+function getMessage(query: any): any {
+  if (typeof query === "number") {
+    return data.find(message => message.id === query);
+  } else {
+    return data.filter(message => message.type === query);
+  }
+}
+```
+
+```typescript
+// const r1: Message | undefined
+const r1 = getMessage(1);
+// const r2: Message[]
+const r2 = getMessage("image");
+```
+
+### 13.3 工具类型
+
+#### 13.3.1 Partical
+
+将类型中的属性都变成可选的，接收类型，返回类型。
+
+```typescript
+interface Person {
+  name: string;
+  age: number;
+}
+
+const person: Person = {
+  name: "张三",
+  age: 20,
+};
+
+function updateObject<T>(obj: T, props: Partial<T>) {
+  return { ...obj, ...props };
+}
+
+updateObject<Person>(person, { name: "李四" });
+```
+
+#### 13.3.2 Readonly
+
+将类型中的属性都变成只读的，接收类型，返回类型。
+
+```typescript
+interface Person {
+  name: string;
+  age: number;
+}
+
+const person: Person = {
+  name: "张三",
+  age: 20,
+};
+
+const anthor: Readonly<Person> = {
+  name: "李四",
+  age: 40,
+};
+
+// 可以修改
+person.name = "王五";
+// 不可以修改
+// anthor.name = "赵六";
+```
+
+#### 13.3.3 Record
+
+```typescript
+interface EmployeeType {
+  id: number
+  fullname: string
+  role: string
+}
+
+let employees: Record<number, EmployeeType> = {
+  0: { id: 1, fullname: "John Doe", role: "Designer" },
+  1: { id: 2, fullname: "Ibrahima Fall", role: "Developer" },
+  2: { id: 3, fullname: "Sara Duckson", role: "Developer" },
+}
+```
 
 
 
